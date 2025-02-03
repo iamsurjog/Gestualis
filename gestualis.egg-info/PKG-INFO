@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: gestualis
+Version: 0.0.1
+Summary: A sample test package
+Home-page: https://github.com/iamsurjog/Gestualis
+Author: Sujatro Ganguli
+Author-email: iamsurjog@gmail.com
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
