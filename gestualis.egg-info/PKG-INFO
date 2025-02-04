@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: gestualis
-Version: 0.0.4
+Version: 0.0.5
 Summary: Gestualis is an AI-driven framework that interprets sign language from visual sources, converting it into spoken or written language in real time. Using advanced computer vision and deep learning, it accurately recognizes hand gestures, facial expressions, and body movements for precise translation. Adaptable for accessibility tools, real-time translation, and education, it also supports user-defined signs, ensuring inclusivity across linguistic regions.
 Home-page: https://github.com/iamsurjog/Gestualis
 Author: Sujatro Ganguli
@@ -11,7 +11,7 @@ Requires-Dist: opencv-python
 Requires-Dist: mediapipe
 
 <h1 align="center">
-<img src="/logo/LOGO.svg" width="300">
+<img src="https://github.com/iamsurjog/Gestualis/blob/main/logo/Logo.svg" width="300">
 </h1><br>
 
 ## <a href="#Installation">Installation</a>

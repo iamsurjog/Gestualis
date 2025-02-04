@@ -8,7 +8,7 @@ authors = [
     {name = "Sujatro Ganguli", email = "iamsurjog@gmail.com"}
 ]
 description = "Gestualis is an AI-driven framework that interprets sign language from visual sources, converting it into spoken or written language in real time. Using advanced computer vision and deep learning, it accurately recognizes hand gestures, facial expressions, and body movements for precise translation. Adaptable for accessibility tools, real-time translation, and education, it also supports user-defined signs, ensuring inclusivity across linguistic regions."
-version = "0.0.4"
+version = "0.0.5"
 readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
