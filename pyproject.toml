@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gestualis"
+authors = [
+    {name = "Sujatro Ganguli", email = "iamsurjog@gmail.com"}
+]
+description = "package description"
+version = "0.0.2"
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    "opencv-python",
+    "mediapipe"
+]
