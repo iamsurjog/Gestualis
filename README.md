@@ -1,5 +1,5 @@
 <h1 align="center">
-<img src="/logo/LOGO.svg" width="300">
+<img src="https://github.com/iamsurjog/Gestualis/blob/main/logo/Logo.svg" width="300">
 </h1><br>
 
 ## <a href="#Installation">Installation</a>
