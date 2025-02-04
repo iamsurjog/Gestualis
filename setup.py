@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="gestualis",
-    version="0.0.1",
+    version="0.0.4",
     author="Sujatro Ganguli",
     author_email="iamsurjog@gmail.com",
     packages=["gestualis"],

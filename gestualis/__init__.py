@@ -3,7 +3,7 @@ import time
 import pickle
 import mediapipe as mp
 import cv2
-
+import copy
 
 class HandDetector:
     def __init__(self):
@@ -85,9 +85,9 @@ class HandDetector:
     def store(self, res, label, path="./signData"):
         """
         Stores the landmark positions in a .dat file in given location.
-        :param res: the position of all landmarks in the 10 frames in form of [[[x, y, z]<- each landmark, [x, y, z]...]<- each frame, [[x, y, z], [x, y, z]...] ...]
+        :param res: The position of all landmarks in the 10 frames in form of [[[x, y, z]<- each landmark, [x, y, z]...]<- each frame, [[x, y, z], [x, y, z]...] ...]
         :param label: Name of the sign
-        :param path: location of all the .dat file
+        :param path: Location of all the .dat file
         :return:
         """
         if not os.path.exists(path):
@@ -99,9 +99,15 @@ class HandDetector:
         pickle.dump(res, f)
         f.close()
 
-    def check(self, res, path="/signData"):
+    def check(self, res, path="./signData"):
+        """
+        Checks which sign the current sign is closest to
+        :param res: The position of all landmarks in the 10 frames in form of [[[x, y, z]<- each landmark, [x, y, z]...]<- each frame, [[x, y, z], [x, y, z]...] ...]
+        :param path:
+        :return: Location of all the .dat file
+        """
         try:
-            l = os.listdir("." + path)
+            l = os.listdir(path)
         except FileNotFoundError:
             raise FileNotFoundError("Path not found")
         dats = [i for i in l if ".dat" in i]
@@ -116,6 +122,35 @@ class HandDetector:
         ans = vals[m]
         return "".join(ans.split(".")[:-1])
 
+    def livefeed(self):
+        """
+        Detects the gestures on a live feed of 10 fps.
+        :return: all the gestures detected
+        """
+        pics = []
+        values = []
+        for i in range(10):
+            success, img = self.cap.read()
+            pics.append(img)
+            time.sleep(0.1)
+
+        while True:
+            try:
+                pic_copy = copy.deepcopy(pics)
+                res = self.detect(pic_copy)
+                ans = self.check(res)
+                print(ans)
+                values.append(ans)
+            except TypeError:
+                print("NONE")
+            success, img = self.cap.read()
+            if success:
+                pics.pop(0)
+                pics.append(img)
+            cv2.imshow("test", img)
+            time.sleep(0.1)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                return values
 
 
 

@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: gestualis
-Version: 0.0.3
+Version: 0.0.4
 Summary: Gestualis is an AI-driven framework that interprets sign language from visual sources, converting it into spoken or written language in real time. Using advanced computer vision and deep learning, it accurately recognizes hand gestures, facial expressions, and body movements for precise translation. Adaptable for accessibility tools, real-time translation, and education, it also supports user-defined signs, ensuring inclusivity across linguistic regions.
 Home-page: https://github.com/iamsurjog/Gestualis
 Author: Sujatro Ganguli
@@ -9,3 +9,58 @@ Requires-Python: >=3.11
 Description-Content-Type: text/markdown
 Requires-Dist: opencv-python
 Requires-Dist: mediapipe
+
+<h1 align="center">
+<img src="/logo/LOGO.svg" width="300">
+</h1><br>
+
+## <a href="#Installation">Installation</a>
+## <a href="#Functionality">Functionality</a>
+## <a href="#Usage">Usage</a>
+
+# Installation
+In order to get started, install gestualis with:
+
+    pip install gestualis
+or if there is no virtual environment being used then:
+
+    py -m pip install gestualis
+
+# Functionality
+This module can:
+
+- <a href="#storing">Capture gesture and store it in form of .dat files</a>
+- <a href="#detection">Detect what a single gesture is closest to within the data which has been programmed by user</a>
+- <a href="#livefeed">Detect gestures from the repertoire of data created by user to detect symbols on a live feed</a>
+
+# Usage
+<section id="storing">
+To store a gesture
+
+    from gestualis import HandDetector
+
+    h = HandDetector()
+    res = h.capture()
+    h.store(res, "name_of_gesture")
+</section>
+
+<section id="detection">
+To detect a gesture
+
+    from gestualis import HandDetector
+
+    h = HandDetector()
+    res = h.capture()
+    h.check(res)
+</section>
+
+<section id="livefeed">
+To detect gestures from a live feed
+
+    from gestualis import HandDetector
+
+    h = HandDetector()
+    res = h.livefeed()
+    print(res)
+</section>
+
