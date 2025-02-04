@@ -50,5 +50,8 @@ To detect gestures from a live feed
     h = HandDetector()
     res = h.livefeed()
     print(res)
+
 </section>
 
+###### Note: 
+The livefeed method has been put in as a rudimentary example only. Best use case of this module would be to take it and edit it yourself and try out things
