@@ -12,6 +12,10 @@ class HandDetector:
         self.cap = cv2.VideoCapture(0)
 
     def capture(self):
+        """
+        captures the 10 frames and processes it
+        :return: the position of all landmarks in the 10 frames in form of [[[x, y, z]<- each landmark, [x, y, z]...]<- each frame, [[x, y, z], [x, y, z]...] ...]
+        """
         res = []
         for i in range(10):
             success, img = self.cap.read()
@@ -23,6 +27,8 @@ class HandDetector:
             res[i] = cv2.cvtColor(res[i], cv2.COLOR_BGR2RGB)
             res[i] = self.hand.process(res[i])
             res[i] = res[i].multi_hand_landmarks
+            if res[i] is None:
+                raise RuntimeError("Hand either not detected or complete hand not on screen.")
             temp = []
             for j in res[i]:
                 for k in j.landmark:
@@ -36,25 +42,32 @@ class HandDetector:
             # cv2.waitKey()
         return res
 
-    # def detect(self, res):
-    #     for i in range(len(res)):
-    #         res[i] = cv2.flip(res[i], 1)
-    #         res[i] = cv2.cvtColor(res[i], cv2.COLOR_BGR2RGB)
-    #         res[i] = self.hand.process(res[i])
-    #         res[i] = res[i].multi_hand_landmarks
-    #         temp = []
-    #         for j in res[i]:
-    #             for k in j.landmark:
-    #                 temp.append([k.x, k.y, k.z])
-    #         res[i] = temp
-    #     return res
+    def detect(self, res):
+        """
+        Takes in 10 images from direct openCV format and returns the formatted result
+        :param res: list of 10 images from openCV
+        :return: the position of all landmarks in the 10 frames in form of [[[x, y, z]<- each landmark, [x, y, z]...]<- each frame, [[x, y, z], [x, y, z]...] ...]
+        """
+        for i in range(len(res)):
+            res[i] = cv2.flip(res[i], 1)
+            res[i] = cv2.cvtColor(res[i], cv2.COLOR_BGR2RGB)
+            res[i] = self.hand.process(res[i])
+            res[i] = res[i].multi_hand_landmarks
+            temp = []
+            for j in res[i]:
+                for k in j.landmark:
+                    temp.append([k.x, k.y, k.z])
+            res[i] = temp
+        return res
 
-    def normalize(self, res):
-        start = res[0]
-        # for i in res:
-        #     for j in len(i):
 
     def distance(self, a, b):
+        """
+        Finds the cosec value between two set of landmark values given.
+        :param a: the position of all landmarks in the 10 frames in form of [[[x, y, z]<- each landmark, [x, y, z]...]<- each frame, [[x, y, z], [x, y, z]...] ...]
+        :param b: the position of all landmarks in the 10 frames in form of [[[x, y, z]<- each landmark, [x, y, z]...]<- each frame, [[x, y, z], [x, y, z]...] ...]
+        :return: cosec distance between vector a and vector b
+        """
         dot_prod = 0
         moda = 0
         modb = 0
@@ -70,6 +83,13 @@ class HandDetector:
         return cosec
 
     def store(self, res, label, path="./signData"):
+        """
+        Stores the landmark positions in a .dat file in given location.
+        :param res: the position of all landmarks in the 10 frames in form of [[[x, y, z]<- each landmark, [x, y, z]...]<- each frame, [[x, y, z], [x, y, z]...] ...]
+        :param label: Name of the sign
+        :param path: location of all the .dat file
+        :return:
+        """
         if not os.path.exists(path):
             os.makedirs(path)
         if ".dat" in label:

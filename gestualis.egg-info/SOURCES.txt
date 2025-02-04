@@ -1,7 +1,9 @@
 README.md
+pyproject.toml
 setup.py
 gestualis/__init__.py
 gestualis.egg-info/PKG-INFO
 gestualis.egg-info/SOURCES.txt
 gestualis.egg-info/dependency_links.txt
+gestualis.egg-info/requires.txt
 gestualis.egg-info/top_level.txt
