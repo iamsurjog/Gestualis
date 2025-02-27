@@ -2,8 +2,6 @@
 <img src="https://github.com/iamsurjog/Gestualis/blob/main/logo/Logo.png" width="300">
 </h1><br>
 
-[![PyPI Downloads](https://img.shields.io/pypi/dm/numpy.svg?label=PyPI%20downloads)](
-https://pypi.org/project/gestualis/)
 
 
 ## <a href="#Installation">Installation</a>
