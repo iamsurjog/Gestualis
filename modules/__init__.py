@@ -1,7 +1,8 @@
+from typing import Callable, final
 import numpy as np
 import numpy.typing as npt
 
-def calculate_flattening_rotation(
+def calculate_required_rotation(
     wrist: npt.NDArray[np.float64], 
     p_axis: npt.NDArray[np.float64], 
     p_rotate: npt.NDArray[np.float64],
@@ -103,9 +104,9 @@ def calculate_flattening_rotation(
     return np.array([w, x, y, z]), theta
 
 
-def apply_rotation(landmark: npt.NDArray[np.float64],
+def apply_rotation(point: npt.NDArray[np.float64],
                    quaternion: npt.NDArray[np.float64],
-                   wrist_pos: npt.NDArray[np.float64]
+                   origin: npt.NDArray[np.float64]
 ):
     """
     Applies a quaternion rotation to an array of (N, 3) landmarks.
@@ -118,16 +119,56 @@ def apply_rotation(landmark: npt.NDArray[np.float64],
         [2*x*y + 2*z*w,         1 - 2*x*x - 2*z*z,     2*y*z - 2*x*w],
         [2*x*z - 2*y*w,         2*y*z + 2*x*w,         1 - 2*x*x - 2*y*y]
     ])
-    
+
     # Shift the hand so the wrist is at the origin (0,0,0)
-    shifted_landmark = landmark - wrist_pos
-    
+    shifted_landmark = point - origin
+
     # Rotate all 21 points simultaneously using matrix multiplication
     rotated_landmark = shifted_landmark @ rot_matrix.T
-    
+
     # Shift the hand back to its original world position
     # final_landmark = rotated_landmark + wrist_pos
-    
+
     # NOTE: replace with final landmark if necessary
 
     return rotated_landmark
+
+
+def simple_hand(landmarks):
+    quat, theta = calculate_required_rotation(wrist=landmarks[0], p_axis=landmarks[9], p_rotate=landmarks[8])
+    rotated = {}
+    rotated[9] = landmarks[9]
+    rotated[0] = landmarks[0]
+    for i in [1, 4, 5, 8, 12, 13, 16, 17, 20]:
+        rotated[i] = apply_rotation(point=landmarks[i], quaternion=quat, origin=landmarks[0])
+    
+    thumb = np.linalg.norm(rotated[4] - rotated[1])
+    index = np.linalg.norm(rotated[8] - rotated[5])
+    middle = np.linalg.norm(rotated[12] - rotated[9])
+    ring = np.linalg.norm(rotated[16] - rotated[13])
+    little = np.linalg.norm(rotated[20] - rotated[17])
+    return thumb, index, middle, ring, little
+
+
+def calculate_angle(vec1: npt.NDArray[np.float64], vec2: npt.NDArray[np.float64]) -> float:
+    if len(vec1) != len(vec2):
+        raise ValueError("Vectors not of same length")
+    dot = np.dot(vec1, vec2)
+    return np.clip(dot / (np.linalg.norm(vec1) * np.linalg.norm(vec2)), -1.0, 1.0)
+
+
+def hand_comparator(hand1: list[npt.NDArray[np.float64]],
+                  hand2: list[npt.NDArray[np.float64]],
+                  innerOperator: Callable[[float], float] = lambda x: x,
+                  outerOperator: Callable[[list[float]], float] = sum(),
+                  finalOperator: Callable[[float], float] = lambda x: x
+                  ) -> float:
+    angles = []
+    for i in range(len(hand1)):
+        angle = innerOperator(calculate_angle(hand1[i], hand2[i]))
+        angles.append(angle)
+        
+    single_value = outerOperator(angles)
+    
+    return finalOperator(single_value)
+
