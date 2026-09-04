@@ -1,4 +1,4 @@
-from typing import Callable, final
+from typing import Callable
 import numpy as np
 import numpy.typing as npt
 
@@ -160,7 +160,7 @@ def calculate_angle(vec1: npt.NDArray[np.float64], vec2: npt.NDArray[np.float64]
 def hand_comparator(hand1: list[npt.NDArray[np.float64]],
                   hand2: list[npt.NDArray[np.float64]],
                   innerOperator: Callable[[float], float] = lambda x: x,
-                  outerOperator: Callable[[list[float]], float] = sum(),
+                  outerOperator: Callable[[list[float]], float] = sum,
                   finalOperator: Callable[[float], float] = lambda x: x
                   ) -> float:
     angles = []
@@ -172,3 +172,6 @@ def hand_comparator(hand1: list[npt.NDArray[np.float64]],
     
     return finalOperator(single_value)
 
+
+def test():
+    print("TEST WORKS")

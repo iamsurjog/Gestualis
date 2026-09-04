@@ -1,0 +1,4 @@
+-e git+https://github.com/iamsurjog/Gestualis@cd0292d8891d88fd325e9cc2c29fea4ff60f0d41#egg=gestualis
+llvmlite==0.49.0
+numba==0.67.0
+numpy==2.5.2
