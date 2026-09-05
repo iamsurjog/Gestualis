@@ -1,6 +1,12 @@
+import numpy as np
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+
+BaseOptions = mp.tasks.BaseOptions
+HandLandmarker = mp.tasks.vision.HandLandmarker
+HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
+VisionRunningMode = mp.tasks.vision.RunningMode
 
 # TODO: 1. Implement getting landmarks and showing format and return
 def get_landmarks(img):
@@ -24,7 +30,7 @@ def get_landmarks(img):
             for i, landmark in enumerate(first_hand_landmarks)
         }
         
-        return formatted_landmarks, hand_landmarker_result
+        return [formatted_landmarks, hand_landmarker_result]
 
 
 

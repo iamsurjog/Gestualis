@@ -173,5 +173,12 @@ def hand_comparator(hand1: list[npt.NDArray[np.float64]],
     return finalOperator(single_value)
 
 
-def test():
-    print("TEST WORKS")
+def get_all(landmarks):
+    quat, theta = calculate_required_rotation(wrist=landmarks[0], p_axis=landmarks[9], p_rotate=landmarks[8])
+    rotated = {}
+    rotated[9] = landmarks[9]
+    rotated[0] = landmarks[0]
+    for i in landmarks:
+        rotated[i] = apply_rotation(point=landmarks[i], quaternion=quat, origin=landmarks[0])
+
+    return rotated
