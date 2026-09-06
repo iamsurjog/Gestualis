@@ -1,11 +1,10 @@
 import cv2
-import mediapipe as mp
-import gestualis 
+import gestualis
 
 # Initialize the camera
 cam = cv2.VideoCapture(0)
 
-# 1. Define how the joints connect to form a hand skeleton
+# Define how the joints connect to form a hand skeleton
 HAND_CONNECTIONS = [
     (0, 1), (1, 2), (2, 3), (3, 4),         # Thumb
     (0, 5), (5, 6), (6, 7), (7, 8),         # Index finger
@@ -15,53 +14,63 @@ HAND_CONNECTIONS = [
     (0, 17)                                 # Wrist to Pinky base
 ]
 
+print("Starting Gestualis hand tracker. Press 'q' to quit.")
+
 while True:
     ret, frame = cam.read()
     if not ret:
-        print("failed to grab frame")
+        print("Failed to grab frame")
         break
-    
+
+    h, w, _ = frame.shape
     img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Call your function ONCE per frame
-    hand, rotated_landmarks, raw_result = gestualis.get_points(img_rgb)
+    # Detect landmarks and get canonical (rotation-invariant) representation
+    features, canonical_landmarks, raw_result = gestualis.get_points(img_rgb)
 
-    if rotated_landmarks:
-        h, w, c = frame.shape
-        pixel_points = {}
-        
-        # 2. Convert your rotated normalized coordinates to pixel coordinates
-        for idx, coords in rotated_landmarks.items():
-            
-            # Shift X and Y by +0.5 to move the origin to the center of the screen
+    # 1. Draw raw detected hand (green skeleton directly on user's hand)
+    if raw_result and raw_result.hand_landmarks:
+        for hand_lms in raw_result.hand_landmarks:
+            raw_pts = {}
+            for idx, lm in enumerate(hand_lms):
+                rx, ry = int(lm.x * w), int(lm.y * h)
+                raw_pts[idx] = (rx, ry)
+                cv2.circle(frame, (rx, ry), 4, (0, 255, 0), cv2.FILLED)
+
+            for s_idx, e_idx in HAND_CONNECTIONS:
+                if s_idx in raw_pts and e_idx in raw_pts:
+                    cv2.line(frame, raw_pts[s_idx], raw_pts[e_idx], (0, 200, 0), 2)
+
+    # 2. Draw canonical normalized hand (cyan/blue skeleton centered on screen, stays upright)
+    if canonical_landmarks:
+        canonical_pts = {}
+        for idx, coords in canonical_landmarks.items():
+            # Shift by +0.5 to center origin (wrist) at screen center
             cx = int((coords[0] + 0.5) * w)
             cy = int((coords[1] + 0.5) * h)
-            
-            pixel_points[idx] = (cx, cy)
-            
-            # Draw a blue circle for the rotated joints
-            cv2.circle(frame, (cx, cy), 5, (255, 0, 0), cv2.FILLED)
-            
-            # --- DEBUGGING PRINT ---
-            # Print the exact pixel coordinates for the Wrist (0) and Middle finger (9)
-            if idx in [0, 9]:
-                print(f"Point {idx} attempting to draw at pixels: X={cx}, Y={cy}")
+            canonical_pts[idx] = (cx, cy)
+            cv2.circle(frame, (cx, cy), 5, (255, 100, 0), cv2.FILLED)
 
-        # Draw the "bones" connecting the rotated joints
-        for connection in HAND_CONNECTIONS:
-            start_idx = connection[0]
-            end_idx = connection[1]
-            
-            if start_idx in pixel_points and end_idx in pixel_points:
-                cv2.line(frame, pixel_points[start_idx], pixel_points[end_idx], (255, 255, 0), 2)
+        # Draw bones connecting the canonical joints
+        for s_idx, e_idx in HAND_CONNECTIONS:
+            if s_idx in canonical_pts and e_idx in canonical_pts:
+                cv2.line(frame, canonical_pts[s_idx], canonical_pts[e_idx], (255, 255, 0), 2)
+
+        # Add visual guide text
+        cv2.putText(frame, "Canonical Hand (Normalized: Upright & Front-Facing)",
+                    (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+        cv2.putText(frame, "Live Tracked Hand (Green)",
+                    (20, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
     # Display the video feed
-    cv2.imshow("Webcam", frame)
-    
+    cv2.imshow("Gestualis Hand Canonicalizer", frame)
+
     # Press 'q' to quit
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 # Clean up resources when done
 cam.release()
+gestualis.camera.close_detector()
 cv2.destroyAllWindows()
+

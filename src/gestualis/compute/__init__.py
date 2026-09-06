@@ -127,34 +127,122 @@ def apply_rotation(point: npt.NDArray[np.float64],
     rotated_landmark = shifted_landmark @ rot_matrix.T
 
     # Shift the hand back to its original world position
-    # final_landmark = rotated_landmark + wrist_pos
+    #final_landmark = rotated_landmark + origin
 
     # NOTE: replace with final landmark if necessary
 
     return rotated_landmark
 
 
-def simple_hand(landmarks):
-    quat, theta = calculate_required_rotation(wrist=landmarks[0], p_axis=landmarks[9], p_rotate=landmarks[8])
-    rotated = {}
-    rotated[9] = landmarks[9]
-    rotated[0] = landmarks[0]
-    for i in [1, 4, 5, 8, 12, 13, 16, 17, 20]:
-        rotated[i] = apply_rotation(point=landmarks[i], quaternion=quat, origin=landmarks[0])
-    
-    thumb = np.linalg.norm(rotated[4] - rotated[1])
-    index = np.linalg.norm(rotated[8] - rotated[5])
-    middle = np.linalg.norm(rotated[12] - rotated[9])
-    ring = np.linalg.norm(rotated[16] - rotated[13])
-    little = np.linalg.norm(rotated[20] - rotated[17])
+def canonicalize_landmarks(
+    landmarks: dict[int, npt.NDArray[np.float64]],
+    normalize_scale: bool = False,
+    reference_palm_len: float = 0.22,
+) -> dict[int, npt.NDArray[np.float64]]:
+    """
+    Rotates and translates the 3D hand landmarks into a canonical reference frame:
+    - Origin (0, 0, 0) is at the Wrist (Landmark 0).
+    - Longitudinal axis: Wrist to Middle MCP (Landmark 9) points straight UP (negative Y on screen).
+    - Palm normal: Faces the front (camera).
+    - Lateral axis: Spans across the knuckles (Index MCP 5 to Pinky MCP 17).
+
+    The resulting canonical coordinates are 100% invariant to hand rotation (pitch, roll, yaw)
+    and translation in 3D space. When the user rotates their hand, the canonical landmarks
+    remain stable in the standard front-facing upright pose.
+
+    Parameters
+    ----------
+    landmarks : dict[int, npt.NDArray[np.float64]]
+        Dictionary of landmark index to 3D coordinate array [x, y, z].
+    normalize_scale : bool, default False
+        If True, normalizes the hand size so distance from camera does not affect landmark values.
+    reference_palm_len : float, default 0.22
+        Reference palm length (distance from Wrist 0 to Middle MCP 9) when scale normalization is active.
+
+    Returns
+    -------
+    canonical : dict[int, npt.NDArray[np.float64]]
+        Dictionary of canonicalized 3D landmark coordinates.
+    """
+    if not landmarks or 0 not in landmarks or 9 not in landmarks:
+        return {}
+
+    p0 = landmarks[0]
+    p9 = landmarks[9]
+
+    # Up vector (wrist to middle MCP)
+    u_vec = p9 - p0
+    u_len = float(np.linalg.norm(u_vec))
+    if u_len < 1e-7:
+        return {k: v - p0 for k, v in landmarks.items()}
+
+    u_hat = u_vec / u_len
+
+    # Transverse / knuckle vector (pinky to index)
+    if 5 in landmarks and 17 in landmarks:
+        p5 = landmarks[5]
+        p17 = landmarks[17]
+        v_vec = p5 - p17
+        # Orthogonalize v with respect to u
+        v_perp = v_vec - np.dot(v_vec, u_hat) * u_hat
+        v_len = float(np.linalg.norm(v_perp))
+        if v_len > 1e-7:
+            v_hat = v_perp / v_len
+        else:
+            v_hat = np.array([1.0, 0.0, 0.0])
+    else:
+        # Fallback if 5 and 17 are not available
+        v_hat = np.array([1.0, 0.0, 0.0])
+
+    # Normal vector perpendicular to palm: n = v x u
+    n_hat = np.cross(v_hat, u_hat)
+    n_len = float(np.linalg.norm(n_hat))
+    if n_len > 1e-7:
+        n_hat = n_hat / n_len
+    else:
+        n_hat = np.array([0.0, 0.0, 1.0])
+
+    # Re-orthogonalize v_hat to ensure strict right-handed orthonormal basis
+    v_hat = np.cross(u_hat, n_hat)
+
+    # Scale factor
+    scale = (reference_palm_len / u_len) if (normalize_scale and u_len > 1e-7) else 1.0
+
+    canonical = {}
+    for idx, pt in landmarks.items():
+        p_rel = pt - p0
+        cx = float(np.dot(p_rel, v_hat) * scale)
+        cy = float(np.dot(p_rel, u_hat) * scale)
+        cz = float(np.dot(p_rel, n_hat) * scale)
+        # In screen/camera coordinates: X is right, Y is up (negative screen y), Z is depth
+        canonical[idx] = np.array([cx, -cy, cz], dtype=np.float64)
+
+    return canonical
+
+
+def simple_hand(landmarks: dict[int, npt.NDArray[np.float64]]) -> tuple[float, float, float, float, float]:
+    """Computes invariant finger lengths from canonicalized landmarks."""
+    if not landmarks or len(landmarks) < 21:
+        return 0.0, 0.0, 0.0, 0.0, 0.0
+
+    canonical = canonicalize_landmarks(landmarks)
+    thumb = float(np.linalg.norm(canonical[4] - canonical[1]))
+    index = float(np.linalg.norm(canonical[8] - canonical[5]))
+    middle = float(np.linalg.norm(canonical[12] - canonical[9]))
+    ring = float(np.linalg.norm(canonical[16] - canonical[13]))
+    little = float(np.linalg.norm(canonical[20] - canonical[17]))
     return thumb, index, middle, ring, little
 
 
 def calculate_angle(vec1: npt.NDArray[np.float64], vec2: npt.NDArray[np.float64]) -> float:
     if len(vec1) != len(vec2):
         raise ValueError("Vectors not of same length")
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
     dot = np.dot(vec1, vec2)
-    return np.clip(dot / (np.linalg.norm(vec1) * np.linalg.norm(vec2)), -1.0, 1.0)
+    return float(np.clip(dot / (norm1 * norm2), -1.0, 1.0))
 
 
 def hand_comparator(hand1: list[npt.NDArray[np.float64]],
@@ -173,12 +261,12 @@ def hand_comparator(hand1: list[npt.NDArray[np.float64]],
     return finalOperator(single_value)
 
 
-def get_all(landmarks):
-    quat, theta = calculate_required_rotation(wrist=landmarks[0], p_axis=landmarks[9], p_rotate=landmarks[8])
-    rotated = {}
-    rotated[9] = landmarks[9]
-    rotated[0] = landmarks[0]
-    for i in landmarks:
-        rotated[i] = apply_rotation(point=landmarks[i], quaternion=quat, origin=landmarks[0])
+def get_all(landmarks: dict[int, npt.NDArray[np.float64]]) -> dict[int, npt.NDArray[np.float64]]:
+    """
+    Returns all 21 hand landmarks rotated back into canonical front-facing upright pose.
+    Invariant to 3D rotation and translation.
+    """
+    if not landmarks:
+        return {}
+    return canonicalize_landmarks(landmarks)
 
-    return rotated
