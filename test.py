@@ -83,31 +83,6 @@ with vision.HandLandmarker.create_from_options(options) as detector:
                 # print(landmarks)
             elif flag == 2:
                 landmarks = gestualis.compute.normalize_hand_orientation(landmarks, (h, w))
-            elif flag == 3: 
-                h, w, _ = frame.shape
-                wrist_px = int(landmarks[0][0] * w)
-                wrist_py = int(landmarks[0][1] * h)
-                aspect_ratio = w / h
-
-                # 2. Fix the aspect ratio so 3D rotation doesn't warp the hand
-                landmarks[:, 0] *= aspect_ratio
-
-                # 3. Do your rotation math (Wrist becomes 0, 0, 0)
-                quat, theta = gestualis.compute.calculate_required_rotation(
-                    landmarks[0], landmarks[9], landmarks[8], threshold=np.radians(12.0)
-                )
-
-                for i in range(len(landmarks)):
-                    landmarks[i] = gestualis.compute.apply_rotation(landmarks[i], quat, landmarks[0])
-
-                # 4. Draw the hand, placing it back over your physical wrist
-                for (x, y, z) in landmarks:
-                    # Divide X by aspect_ratio to revert it to screen space,
-                    # multiply by width/height, and ADD the original wrist location back
-                    px = int((x / aspect_ratio) * w) + wrist_px
-                    py = int(y * h) + wrist_py
-                    
-                    cv2.circle(frame, (px, py), 5, (0, 255, 0), -1)
 
             
             print(landmarks)
@@ -132,7 +107,7 @@ with vision.HandLandmarker.create_from_options(options) as detector:
             break
         # Toggle flag if 's' is pressed
         if key == ord('s'):
-            flag = (flag + 1) % 4
+            flag = (flag + 1) % 3
 
 # Clean up
 cap.release()
