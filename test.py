@@ -1,40 +1,139 @@
-# STEP 1: Import the necessary modules.
 import cv2
+import time
+import numpy as np
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
-# STEP 2: Create an HandLandmarker object.
-base_options = python.BaseOptions(model_asset_path='/home/randomguy/Downloads/hand_landmarker.task')
-options = vision.HandLandmarkerOptions(base_options=base_options,
-                                       num_hands=2)
-detector = vision.HandLandmarker.create_from_options(options)
-cam = cv2.VideoCapture(0)
+import gestualis
 
-while True:
-    ret, frame = cam.read()
-    if not ret:
-        print("failed to grab frame")
-        break
-    
-    img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+# ==========================================
+# 1. Configuration & Model Loading
+# ==========================================
+MODEL_PATH = "/home/randomguy/Downloads/hand_landmarker.task"
 
+flag = 0
 
-    # Display the video feed
-    cv2.imshow("Webcam", frame)
-    
-    # Press 'q' to quit
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+# Configure the MediaPipe Hand Landmarker options
+base_options = python.BaseOptions(model_asset_path=MODEL_PATH)
+options = vision.HandLandmarkerOptions(
+    base_options=base_options,
+    running_mode=vision.RunningMode.VIDEO,  # Highly recommended for webcam streams
+    num_hands=1,
+    min_hand_detection_confidence=0.5,
+    min_hand_presence_confidence=0.5,
+    min_tracking_confidence=0.5
+)
 
+# ==========================================
+# 2. Video Capture
+# ==========================================
+cap = cv2.VideoCapture(0)
+print("Press 'q' to quit.")
 
+# VIDEO running mode requires a strictly increasing timestamp
+start_time = time.time()
 
-# STEP 3: Load the input image.
-image = mp.Image.create_from_file("image.jpg")
+# Create the detector using a context manager so it safely cleans up memory
+with vision.HandLandmarker.create_from_options(options) as detector:
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            print("Failed to grab frame.")
+            break
+        
+        # Mirror the frame and convert BGR (OpenCV) to RGB (MediaPipe expects RGB)
+        frame = cv2.flip(frame, 1)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        # ==========================================
+        # 3. Pre-processing & Inference
+        # ==========================================
+        # Convert the numpy array into MediaPipe's Image object
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
+        
+        # Calculate milliseconds since the loop started
+        timestamp_ms = int((time.time() - start_time) * 1000)
+        
+        # Run inference
+        results = detector.detect_for_video(mp_image, timestamp_ms)
+        
+        # ==========================================
+        # 4. Post-processing & Visualization
+        # ==========================================
+        # Check if any hands were detected in this frame
+        if results.hand_landmarks:
+            # Grab the first detected hand
+            hand_landmarks = results.hand_landmarks[0]
+            
+            # Convert MediaPipe's NormalizedLandmark objects into a 21x3 numpy array
+            # so your existing gestualis rotation logic works without modification.
+            landmarks = np.array([[lm.x, lm.y, lm.z] for lm in hand_landmarks], dtype=np.float32)
+            
 
-# STEP 4: Detect hand landmarks from the input image.
-detection_result = detector.detect(image)
+            h, w, _ = frame.shape
+            if flag == 1:
+                dict_landmarks = {i: landmarks[i] for i in range(21)}
+                ROTATION_THRESHOLD = np.radians(12.0)
 
-# STEP 5: Process the classification result. In this case, visualize it.
-annotated_image = draw_landmarks_on_image(image.numpy_view(), detection_result)
-cv2_imshow(cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
+                quat, _ = gestualis.compute.calculate_required_rotation(landmarks[0], landmarks[9], landmarks[8], ROTATION_THRESHOLD)
+
+                for i in range(len(landmarks)):
+                    landmarks[i] = gestualis.compute.apply_rotation(landmarks[i], quat, landmarks[0])
+                # print(landmarks)
+            elif flag == 2:
+                landmarks = gestualis.compute.normalize_hand_orientation(landmarks, (h, w))
+            elif flag == 3: 
+                h, w, _ = frame.shape
+                wrist_px = int(landmarks[0][0] * w)
+                wrist_py = int(landmarks[0][1] * h)
+                aspect_ratio = w / h
+
+                # 2. Fix the aspect ratio so 3D rotation doesn't warp the hand
+                landmarks[:, 0] *= aspect_ratio
+
+                # 3. Do your rotation math (Wrist becomes 0, 0, 0)
+                quat, theta = gestualis.compute.calculate_required_rotation(
+                    landmarks[0], landmarks[9], landmarks[8], threshold=np.radians(12.0)
+                )
+
+                for i in range(len(landmarks)):
+                    landmarks[i] = gestualis.compute.apply_rotation(landmarks[i], quat, landmarks[0])
+
+                # 4. Draw the hand, placing it back over your physical wrist
+                for (x, y, z) in landmarks:
+                    # Divide X by aspect_ratio to revert it to screen space,
+                    # multiply by width/height, and ADD the original wrist location back
+                    px = int((x / aspect_ratio) * w) + wrist_px
+                    py = int(y * h) + wrist_py
+                    
+                    cv2.circle(frame, (px, py), 5, (0, 255, 0), -1)
+
+            
+            print(landmarks)
+            time.sleep(0.1)
+            if flag != 3:
+                for (x, y, z) in landmarks:
+                    # MediaPipe coordinates are strictly normalized from 0.0 to 1.0
+                    px = int(x * w)
+                    py = int(y * h)
+                    
+                    # Draw a circle for each landmark
+                    cv2.circle(frame, (px, py), 5, (0, 255, 0), -1)
+
+        # Display the result
+        cv2.imshow('MediaPipe Hand Tasks API', frame)
+
+        # Key inputs
+        key = cv2.waitKey(1) & 0xFF
+        
+        # Break loop if 'q' is pressed
+        if key == ord('q'):
+            break
+        # Toggle flag if 's' is pressed
+        if key == ord('s'):
+            flag = (flag + 1) % 4
+
+# Clean up
+cap.release()
+cv2.destroyAllWindows()

@@ -1,6 +1,62 @@
-from typing import Callable
+from typing import Callable, final
 import numpy as np
 import numpy.typing as npt
+
+
+def normalize_hand_orientation(landmarks: np.ndarray, image_shape: tuple[int, int] | None = None) -> np.ndarray:
+    """
+    Transforms landmarks into a canonical, orientation-invariant local coordinate system.
+    Middle finger points straight UP (+Y), palm faces the screen (+Z).
+    
+    landmarks: (21, 3) array
+    image_shape: optional (height, width) to correct non-square aspect ratios
+    """
+    pts = landmarks.copy()
+    
+    # 1. Correct aspect ratio so 3D rotation doesn't warp
+    if image_shape is not None:
+        h, w = image_shape
+        aspect = w / h
+        pts[:, 0] *= aspect
+
+    # 2. Shift wrist (Landmark 0) to origin (0, 0, 0)
+    origin = pts[0].copy()
+    shifted = pts - origin
+
+    # 3. Define the local coordinate basis using rigid palm joints
+    # y_axis: Wrist (0) -> Middle MCP (9)
+    v_y = shifted[9]
+    norm_y = np.linalg.norm(v_y)
+    if norm_y == 0:
+        return landmarks
+    u_y = v_y / norm_y
+
+    # Reference vector across the palm: Wrist (0) -> Index MCP (5)
+    v_palm = shifted[5]
+
+    # z_axis: Normal to palm plane (cross product)
+    v_z = np.cross(v_palm, u_y)
+    norm_z = np.linalg.norm(v_z)
+    if norm_z == 0:
+        return landmarks
+    u_z = v_z / norm_z
+
+    # x_axis: Perpendicular to Y and Z
+    u_x = np.cross(u_y, u_z)
+    u_x = u_x / np.linalg.norm(u_x)
+
+    # 4. Construct Rotation Matrix (Row vectors project into the local basis)
+    # R transforms world coordinates -> hand-local coordinates
+    R = np.vstack([u_x, u_y, u_z])
+
+    # 5. Apply the rotation to all 21 points
+    canonical_pts = (R @ shifted.T).T
+
+    # (Optional) Normalize for hand distance / scale so hand size is also invariant
+    # palm_scale = np.linalg.norm(canonical_pts[9])
+    # canonical_pts /= palm_scale
+
+    return canonical_pts + origin
 
 def calculate_required_rotation(
     wrist: npt.NDArray[np.float64], 
@@ -127,7 +183,7 @@ def apply_rotation(point: npt.NDArray[np.float64],
     rotated_landmark = shifted_landmark @ rot_matrix.T
 
     # Shift the hand back to its original world position
-    # final_landmark = rotated_landmark + wrist_pos
+    # rotated_landmark = rotated_landmark + origin
 
     # NOTE: replace with final landmark if necessary
 

@@ -1,13 +1,6 @@
 import pickle
 import os
 from . import compute
-from . import camera
-
-def get_points(img):
-    pts, raw = camera.get_landmarks(img)
-    # return compute.simple_hand(pts), pts, raw
-    return None, compute.get_all(pts), raw
-
 
 def compare(hand, path="./Data"):
     s = os.listdir(path)
