@@ -1,4 +1,3 @@
-from typing import Callable, final
 import numpy as np
 import numpy.typing as npt
 
@@ -192,41 +191,19 @@ def apply_rotation(point: npt.NDArray[np.float64],
 
 def simple_hand(landmarks):
     quat, theta = calculate_required_rotation(wrist=landmarks[0], p_axis=landmarks[9], p_rotate=landmarks[8])
+    # rotated = landmarks
     rotated = {}
     rotated[9] = landmarks[9]
     rotated[0] = landmarks[0]
     for i in [1, 4, 5, 8, 12, 13, 16, 17, 20]:
         rotated[i] = apply_rotation(point=landmarks[i], quaternion=quat, origin=landmarks[0])
-    
-    thumb = np.linalg.norm(rotated[4] - rotated[1])
-    index = np.linalg.norm(rotated[8] - rotated[5])
-    middle = np.linalg.norm(rotated[12] - rotated[9])
-    ring = np.linalg.norm(rotated[16] - rotated[13])
-    little = np.linalg.norm(rotated[20] - rotated[17])
+    thumb = (rotated[4] - rotated[1])
+    index = (rotated[8] - rotated[5])
+    middle = (rotated[12] - rotated[9])
+    ring = (rotated[16] - rotated[13])
+    little = (rotated[20] - rotated[17])
     return thumb, index, middle, ring, little
 
-
-def calculate_angle(vec1: npt.NDArray[np.float64], vec2: npt.NDArray[np.float64]) -> float:
-    if len(vec1) != len(vec2):
-        raise ValueError("Vectors not of same length")
-    dot = np.dot(vec1, vec2)
-    return np.clip(dot / (np.linalg.norm(vec1) * np.linalg.norm(vec2)), -1.0, 1.0)
-
-
-def hand_comparator(hand1: list[npt.NDArray[np.float64]],
-                  hand2: list[npt.NDArray[np.float64]],
-                  innerOperator: Callable[[float], float] = lambda x: x,
-                  outerOperator: Callable[[list[float]], float] = sum,
-                  finalOperator: Callable[[float], float] = lambda x: x
-                  ) -> float:
-    angles = []
-    for i in range(len(hand1)):
-        angle = innerOperator(calculate_angle(hand1[i], hand2[i]))
-        angles.append(angle)
-        
-    single_value = outerOperator(angles)
-    
-    return finalOperator(single_value)
 
 
 def get_all(landmarks):
