@@ -3,4 +3,4 @@ __pycache__/
 *.py[cod]
 *$py.class
 /Data
-/kinect_leap_dataset/acquisitions
+/kinect_leap_dataset
