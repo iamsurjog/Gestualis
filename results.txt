@@ -1,0 +1,12 @@
+Results:
+
+Gesture 1: 10/10
+Gesture 2: 5/10
+Gesture 3: 9/10
+Gesture 4: 8/10
+Gesture 5: 5/6
+Gesture 6: 5/6
+Gesture 7: 10/10
+Gesture 8: 7/7
+Gesture 9: 10/10
+Gesture 10: 2/5

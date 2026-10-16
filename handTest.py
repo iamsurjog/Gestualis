@@ -74,11 +74,10 @@ with vision.HandLandmarker.create_from_options(options) as detector:
             dict_landmarks = {i: landmarks[i] for i in range(21)}
             hand = gestualis.compute.simple_hand(dict_landmarks)
 
-            # s = gestualis.store.compare(hand)
-            # print(s)
+            s = gestualis.store.compare(hand, path="./testData")
+            print(s)
 
-            # gestualis.store.store(hand, name="10.dat")
-            # break
+            # gestualis.store.store(hand, name="B.dat", path="./testData")
 
             # print(landmarks)
 

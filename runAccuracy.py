@@ -115,27 +115,29 @@ def get_hand_landmarks_mediapipe(image_path, model_path="model/hand_landmarker.t
                 
         return formatted_hands
 
-P2 = {2: 3, 4: 10, 6:9, 7:10, 8:10, 10:7}
+P2 = {2: 3, 3: 1, 5:1, 6:9, 8:7, 10:7}
 if __name__ == "__main__":
-    G = "1"
+    G = 1
     P = "2"
 
     ######################################
     ######### Storing of file ############
     ######################################
 
-    image_file = f"./kinect_leap_dataset/acquisitions/P{P}/G{G}/10_rgb.png"
-    detected_hands = get_hand_landmarks_mediapipe(image_file)
-
-    if detected_hands:
-        landmarks = detected_hands[0]
-
-        hand = gestualis.compute.simple_hand(landmarks)
-        gestualis.store.store(hand, name=f"{G}.dat")
-
-        print(f"Success: Hand data saved to {G}.dat")
-    else:
-        print(f"Failed: No hands detected in {image_file}")
+    # for G in range(1, 11):
+    # image_file = f"./kinect_leap_dataset/acquisitions/P{P}/G{G}/{P2.get(G, 10)}_rgb.png"
+    # # image_file = f"./kinect_leap_dataset/acquisitions/P{P}/G{G}/7_rgb.png"
+    # detected_hands = get_hand_landmarks_mediapipe(image_file)
+    #
+    # if detected_hands:
+    #     landmarks = detected_hands[0]
+    #
+    #     hand = gestualis.compute.simple_hand(landmarks)
+    #     gestualis.store.store(hand, name=f"{G}.dat")
+    #
+    #     print(f"Success: Hand data saved to {G}.dat")
+    # else:
+    #     print(f"Failed: No hands detected in {image_file}")
 
     ######################################
     ######### Compare of file ############
@@ -150,6 +152,7 @@ if __name__ == "__main__":
             print("-" * 80)
             for j in detected_hands:
                 hand = gestualis.compute.simple_hand(j)
+                # output = gestualis.store.compare(hand, innerOperator=lambda x: 1/( (1-x**2)**(0.5) ))
                 output = gestualis.store.compare(hand)
                 counter += 1
                 if output == str(G):

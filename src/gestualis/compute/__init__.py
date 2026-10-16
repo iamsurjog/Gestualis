@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 
 
-def normalize_hand_orientation(landmarks: np.ndarray, image_shape: tuple[int, int] | None = None) -> np.ndarray:
+def normalize_hand_orientation( landmarks: np.ndarray, image_shape: tuple[int, int] | None = None) -> np.ndarray:
     """
     Transforms landmarks into a canonical, orientation-invariant local coordinate system.
     Middle finger points straight UP (+Y), palm faces the screen (+Z).
@@ -57,12 +57,8 @@ def normalize_hand_orientation(landmarks: np.ndarray, image_shape: tuple[int, in
 
     return canonical_pts + origin
 
-def calculate_required_rotation(
-    wrist: npt.NDArray[np.float64], 
-    p_axis: npt.NDArray[np.float64], 
-    p_rotate: npt.NDArray[np.float64],
-    threshold: float | None = None
-) -> tuple[npt.NDArray[np.float64], float]:
+
+def calculate_required_rotation( wrist: npt.NDArray[np.float64], p_axis: npt.NDArray[np.float64], p_rotate: npt.NDArray[np.float64], threshold: float | None = None) -> tuple[npt.NDArray[np.float64], float]:
     """
     Calculates the quaternion required to rotate a point around a spatial axis 
     until its Z-coordinate matches the axis target.
@@ -159,10 +155,7 @@ def calculate_required_rotation(
     return np.array([w, x, y, z]), theta
 
 
-def apply_rotation(point: npt.NDArray[np.float64],
-                   quaternion: npt.NDArray[np.float64],
-                   origin: npt.NDArray[np.float64]
-):
+def apply_rotation(point: npt.NDArray[np.float64], quaternion: npt.NDArray[np.float64], origin: npt.NDArray[np.float64]):
     """
     Applies a quaternion rotation to an array of (N, 3) landmarks.
     """
@@ -190,6 +183,7 @@ def apply_rotation(point: npt.NDArray[np.float64],
 
 
 def simple_hand(landmarks):
+    # TODO: add finger locking 
     quat, theta = calculate_required_rotation(wrist=landmarks[0], p_axis=landmarks[9], p_rotate=landmarks[8])
     # rotated = landmarks
     rotated = {}
