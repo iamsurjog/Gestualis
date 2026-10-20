@@ -1,5 +1,7 @@
+# TODO: Refactor again (remove unnecessary codes)
 import numpy as np
 import numpy.typing as npt
+import math
 
 
 def normalize_hand_orientation( landmarks: np.ndarray, image_shape: tuple[int, int] | None = None) -> np.ndarray:
@@ -182,9 +184,9 @@ def apply_rotation(point: npt.NDArray[np.float64], quaternion: npt.NDArray[np.fl
     return rotated_landmark
 
 
+# TODO: REMOVE
 def simple_hand(landmarks):
-    # TODO: add finger locking 
-    quat, theta = calculate_required_rotation(wrist=landmarks[0], p_axis=landmarks[9], p_rotate=landmarks[8])
+    qugt, theta = calculate_required_rotation(wrist=landmarks[0], p_axis=landmarks[9], p_rotate=landmarks[8])
     # rotated = landmarks
     rotated = {}
     rotated[9] = landmarks[9]
@@ -199,7 +201,7 @@ def simple_hand(landmarks):
     return thumb, index, middle, ring, little
 
 
-
+# TODO: REMOVE
 def get_all(landmarks):
     quat, theta = calculate_required_rotation(wrist=landmarks[0], p_axis=landmarks[9], p_rotate=landmarks[8])
     rotated = {}
@@ -209,3 +211,36 @@ def get_all(landmarks):
         rotated[i] = apply_rotation(point=landmarks[i], quaternion=quat, origin=landmarks[0])
 
     return rotated
+
+def get_distance(self, p1, p2):
+    """Calculates Euclidean distance between two MediaPipe landmarks in 3D."""
+    return math.sqrt(
+            (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2
+        )
+def get_fingers(landmarks) -> list[bool]:
+    """
+        Get list of all active fingers in this format: index, middle, ring, pinky, thumb
+    """
+    open_fingers = []
+    FINGER_TIPS = [8, 12, 16, 20]
+    FINGER_PIPS = [6, 10, 14, 18]
+    for tip_idx, pip_idx in zip( FINGER_TIPS, FINGER_PIPS):
+        dist_tip_to_wrist = get_distance(landmarks[tip_idx], landmarks[0])
+        dist_pip_to_wrist = get_distance(landmarks[pip_idx], landmarks[0])
+
+        # Multiplier (1.1) adds a margin of error against curled finger tips
+        if dist_tip_to_wrist > dist_pip_to_wrist * 1.1:
+            open_fingers.append(True)
+        else:
+            open_fingers.append(False)
+
+    # --- Thumb Logic (Independent of Hand Tilt) ---
+    # Compares distance from thumb tip to pinky MCP base
+    dist_thumb_tip_to_pinky = self.get_distance(landmarks[4], landmarks[17])
+    dist_thumb_ip_to_pinky = self.get_distance(landmarks[4], landmarks[17])
+
+    if dist_thumb_tip_to_pinky > dist_thumb_ip_to_pinky:
+        open_fingers.append(True)
+    else:
+        open_fingers.append(False)
+    return open_fingers
